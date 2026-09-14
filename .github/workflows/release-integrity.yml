@@ -1,4 +1,4 @@
-name: Public Update Publisher and Integrity
+name: Public Update Release Integrity
 
 on:
   push:
@@ -14,147 +14,40 @@ permissions:
 
 concurrency:
   group: public-update-release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  publish:
+  request-lint:
     if: github.event_name == 'push'
-    runs-on: [self-hosted, Windows, X64, AN]
-    timeout-minutes: 15
-    permissions:
-      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout public update repository
         uses: actions/checkout@v7
 
-      - name: Validate staged signed package
-        id: request
-        shell: pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+      - name: Validate release request contract
+        shell: python
         run: |
-          $ErrorActionPreference = 'Stop'
-          $request = Get-Content 'RELEASE_REQUEST.json' -Raw | ConvertFrom-Json
-          $version = [string]$request.version
-          $tag = [string]$request.tag
-          $sourceSha = [string]$request.source_sha
-          if ($version -notmatch '^2\.1\.0-alpha\.[0-9]+$') { throw "Invalid release version: $version" }
-          if ($tag -ne "v$version") { throw "Release tag/version mismatch: $tag / $version" }
-          if ($sourceSha -notmatch '^[0-9a-f]{40}$') { throw 'source_sha must be a full lowercase Git commit SHA.' }
+          import json
+          import re
+          from pathlib import Path
 
-          $root = 'F:\GitHub\AN-update-staging'
-          $stageDir = Join-Path $root $tag
-          $readyPath = Join-Path $stageDir 'READY.json'
-          if (-not (Test-Path $readyPath)) { throw "READY.json not found for $tag" }
-          $ready = Get-Content $readyPath -Raw | ConvertFrom-Json
-          if ([int]$ready.schema -ne 1) { throw 'Unsupported READY.json schema.' }
-          if ([string]$ready.source_repository -ne 'luiyun-code/AutoNovel') { throw 'Unexpected source repository.' }
-          if ([string]$ready.source_sha -ne $sourceSha) { throw 'Staged source SHA does not match release request.' }
-          if ([string]$ready.version -ne $version -or [string]$ready.tag -ne $tag) { throw 'Staged version/tag does not match release request.' }
-
-          $installer = "AN_${version}_x64-setup.exe"
-          if ([string]$ready.installer -ne $installer) { throw 'READY.json installer name is not canonical.' }
-          $expected = @('latest.json', $installer, "$installer.sig", "$installer.sha256")
-          foreach ($name in $expected) {
-            $path = Join-Path $stageDir $name
-            if (-not (Test-Path $path) -or (Get-Item $path).Length -le 0) { throw "Missing or empty staged asset: $name" }
-          }
-
-          $actualHash = (Get-FileHash (Join-Path $stageDir $installer) -Algorithm SHA256).Hash.ToLower()
-          $hashFile = (Get-Content (Join-Path $stageDir "$installer.sha256") -Raw).Trim().ToLower()
-          if ($actualHash -ne $hashFile -or $actualHash -ne ([string]$ready.installer_sha256).ToLower()) { throw 'Installer SHA256 mismatch in staging.' }
-
-          $signature = (Get-Content (Join-Path $stageDir "$installer.sig") -Raw).Trim()
-          if ([string]::IsNullOrWhiteSpace($signature)) { throw 'Detached updater signature is empty.' }
-          $manifest = Get-Content (Join-Path $stageDir 'latest.json') -Raw | ConvertFrom-Json
-          if ([string]$manifest.version -ne $version) { throw 'latest.json version mismatch.' }
-          $platform = $manifest.platforms.'windows-x86_64'
-          if ($null -eq $platform) { throw 'latest.json is missing windows-x86_64.' }
-          if ([string]$platform.signature -ne $signature) { throw 'latest.json signature does not match detached .sig.' }
-          $expectedUrl = "https://github.com/luiyun-code/AutoNovel-Update/releases/download/$tag/$installer"
-          if ([string]$platform.url -ne $expectedUrl) { throw 'latest.json installer URL is not canonical.' }
-
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "source_sha=$sourceSha" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "stage_dir=$stageDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          Write-Host "[AN] staged signed package verification PASS: $tag source=$sourceSha sha256=$actualHash"
-
-      - name: Publish immutable release using repository GITHUB_TOKEN
-        shell: pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ steps.request.outputs.version }}
-          RELEASE_TAG: ${{ steps.request.outputs.tag }}
-          STAGE_DIR: ${{ steps.request.outputs.stage_dir }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $repo = '${{ github.repository }}'
-          $headers = @{
-            Authorization = "Bearer $env:GH_TOKEN"
-            Accept = 'application/vnd.github+json'
-            'X-GitHub-Api-Version' = '2022-11-28'
-            'User-Agent' = 'AutoNovel-Update-Publisher'
-          }
-
-          $probe = Invoke-WebRequest -Uri "https://api.github.com/repos/$repo/releases/tags/$env:RELEASE_TAG" -Headers $headers -SkipHttpErrorCheck
-          if ($probe.StatusCode -eq 200) { throw "Release $env:RELEASE_TAG already exists; immutable releases are never overwritten." }
-          if ($probe.StatusCode -ne 404) { throw "Release existence check failed with HTTP $($probe.StatusCode)." }
-
-          $body = @{
-            tag_name = $env:RELEASE_TAG
-            target_commitish = '${{ github.sha }}'
-            name = "AN $env:RELEASE_VERSION"
-            body = "Signed AN $env:RELEASE_VERSION Windows human-test update. Source remains private in luiyun-code/AutoNovel."
-            draft = $true
-            prerelease = $false
-          } | ConvertTo-Json
-          $release = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/$repo/releases" -Headers $headers -ContentType 'application/json' -Body $body
-          $releaseId = [string]$release.id
-          if ([string]::IsNullOrWhiteSpace($releaseId)) { throw 'GitHub did not return a release id.' }
-
-          $installer = "AN_$($env:RELEASE_VERSION)_x64-setup.exe"
-          foreach ($assetName in @('latest.json', $installer, "$installer.sig", "$installer.sha256")) {
-            $path = Join-Path $env:STAGE_DIR $assetName
-            $escaped = [Uri]::EscapeDataString($assetName)
-            $uploadUrl = "https://uploads.github.com/repos/$repo/releases/$releaseId/assets?name=$escaped"
-            Invoke-RestMethod -Method Post -Uri $uploadUrl -Headers $headers -ContentType 'application/octet-stream' -InFile $path | Out-Null
-            Write-Host "[AN] uploaded $assetName"
-          }
-
-          $publishBody = @{ draft = $false } | ConvertTo-Json
-          Invoke-RestMethod -Method Patch -Uri "https://api.github.com/repos/$repo/releases/$releaseId" -Headers $headers -ContentType 'application/json' -Body $publishBody | Out-Null
-          Write-Host "[AN] published immutable release $env:RELEASE_TAG"
-
-      - name: Verify anonymous latest endpoint and clean staging
-        shell: pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
-        env:
-          RELEASE_VERSION: ${{ steps.request.outputs.version }}
-          STAGE_DIR: ${{ steps.request.outputs.stage_dir }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $url = 'https://github.com/luiyun-code/AutoNovel-Update/releases/latest/download/latest.json'
-          $dest = Join-Path $env:RUNNER_TEMP 'autonovel-public-latest.json'
-          $ok = $false
-          for ($attempt = 1; $attempt -le 10; $attempt++) {
-            try {
-              Invoke-WebRequest -Uri $url -OutFile $dest -MaximumRedirection 10
-              if ((Test-Path $dest) -and ((Get-Item $dest).Length -gt 0)) {
-                $manifest = Get-Content $dest -Raw | ConvertFrom-Json
-                if ([string]$manifest.version -eq $env:RELEASE_VERSION) { $ok = $true; break }
-              }
-            } catch {}
-            Start-Sleep -Seconds 3
-          }
-          if (-not $ok) { throw 'Published latest.json did not become anonymously reachable with the expected version.' }
-          if (Test-Path $env:STAGE_DIR) { Remove-Item -Recurse -Force $env:STAGE_DIR }
-          Write-Host "[AN] anonymous public latest endpoint PASS: $env:RELEASE_VERSION"
+          request = json.loads(Path('RELEASE_REQUEST.json').read_text(encoding='utf-8-sig'))
+          version = str(request.get('version', ''))
+          tag = str(request.get('tag', ''))
+          source_sha = str(request.get('source_sha', ''))
+          if not re.fullmatch(r'2\.1\.0-alpha\.\d+', version):
+              raise SystemExit(f'invalid version: {version}')
+          if tag != f'v{version}':
+              raise SystemExit(f'tag/version mismatch: {tag} / {version}')
+          if not re.fullmatch(r'[0-9a-f]{40}', source_sha):
+              raise SystemExit('source_sha must be a full lowercase Git commit SHA')
+          print(f'PASS: release request {tag} source={source_sha}')
 
   audit:
-    needs: publish
-    if: ${{ always() && (github.event_name == 'release' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && needs.publish.result == 'success')) }}
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - name: Audit published updater assets
         env:
@@ -169,72 +62,72 @@ jobs:
           import re
           import urllib.request
 
-          repo = os.environ["REPOSITORY"]
-          token = os.environ["GH_TOKEN"]
-          event_path = os.environ["EVENT_PATH"]
+          repo = os.environ['REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          event_path = os.environ['EVENT_PATH']
 
           def get_json(url):
               req = urllib.request.Request(
                   url,
                   headers={
-                      "Accept": "application/vnd.github+json",
-                      "Authorization": f"Bearer {token}",
-                      "X-GitHub-Api-Version": "2022-11-28",
-                      "User-Agent": "AutoNovel-Update-integrity",
+                      'Accept': 'application/vnd.github+json',
+                      'Authorization': f'Bearer {token}',
+                      'X-GitHub-Api-Version': '2022-11-28',
+                      'User-Agent': 'AutoNovel-Update-integrity',
                   },
               )
               with urllib.request.urlopen(req, timeout=30) as response:
                   return json.load(response)
 
           def get_bytes(url):
-              req = urllib.request.Request(url, headers={"User-Agent": "AutoNovel-Update-integrity"})
+              req = urllib.request.Request(url, headers={'User-Agent': 'AutoNovel-Update-integrity'})
               with urllib.request.urlopen(req, timeout=60) as response:
                   return response.read()
 
-          with open(event_path, "r", encoding="utf-8") as handle:
+          with open(event_path, 'r', encoding='utf-8') as handle:
               event = json.load(handle)
 
-          release = event.get("release")
+          release = event.get('release')
           if release is None:
-              release = get_json(f"https://api.github.com/repos/{repo}/releases/latest")
+              release = get_json(f'https://api.github.com/repos/{repo}/releases/latest')
 
-          tag = release["tag_name"]
-          if not re.fullmatch(r"v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", tag):
-              raise SystemExit(f"invalid release tag: {tag}")
+          tag = release['tag_name']
+          if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?', tag):
+              raise SystemExit(f'invalid release tag: {tag}')
           version = tag[1:]
-          expected_installer = f"AN_{version}_x64-setup.exe"
+          expected_installer = f'AN_{version}_x64-setup.exe'
           expected = {
-              "latest.json",
+              'latest.json',
               expected_installer,
-              f"{expected_installer}.sig",
-              f"{expected_installer}.sha256",
+              f'{expected_installer}.sig',
+              f'{expected_installer}.sha256',
           }
 
-          assets = {asset["name"]: asset for asset in release.get("assets", [])}
+          assets = {asset['name']: asset for asset in release.get('assets', [])}
           missing = expected - set(assets)
           if missing:
-              raise SystemExit(f"missing canonical updater assets: {sorted(missing)}")
+              raise SystemExit(f'missing canonical updater assets: {sorted(missing)}')
 
-          manifest = json.loads(get_bytes(assets["latest.json"]["browser_download_url"]).decode("utf-8-sig"))
-          if manifest.get("version") != version:
-              raise SystemExit("latest.json version does not match release tag")
-          platforms = manifest.get("platforms")
-          if not isinstance(platforms, dict) or "windows-x86_64" not in platforms:
-              raise SystemExit("latest.json is missing windows-x86_64")
-          platform = platforms["windows-x86_64"]
-          signature = platform.get("signature")
+          manifest = json.loads(get_bytes(assets['latest.json']['browser_download_url']).decode('utf-8-sig'))
+          if manifest.get('version') != version:
+              raise SystemExit('latest.json version does not match release tag')
+          platforms = manifest.get('platforms')
+          if not isinstance(platforms, dict) or 'windows-x86_64' not in platforms:
+              raise SystemExit('latest.json is missing windows-x86_64')
+          platform = platforms['windows-x86_64']
+          signature = platform.get('signature')
           if not isinstance(signature, str) or not signature.strip():
-              raise SystemExit("latest.json signature is empty")
-          expected_url = f"https://github.com/{repo}/releases/download/{tag}/{expected_installer}"
-          if platform.get("url") != expected_url:
-              raise SystemExit("latest.json installer URL is not canonical")
+              raise SystemExit('latest.json signature is empty')
+          expected_url = f'https://github.com/{repo}/releases/download/{tag}/{expected_installer}'
+          if platform.get('url') != expected_url:
+              raise SystemExit('latest.json installer URL is not canonical')
 
-          installer = get_bytes(assets[expected_installer]["browser_download_url"])
+          installer = get_bytes(assets[expected_installer]['browser_download_url'])
           digest = hashlib.sha256(installer).hexdigest()
-          expected_digest = get_bytes(assets[f"{expected_installer}.sha256"]["browser_download_url"]).decode("ascii").strip().lower()
+          expected_digest = get_bytes(assets[f'{expected_installer}.sha256']['browser_download_url']).decode('ascii').strip().lower()
           if digest != expected_digest:
-              raise SystemExit("installer SHA256 mismatch")
-          detached_signature = get_bytes(assets[f"{expected_installer}.sig"]["browser_download_url"]).decode("utf-8-sig").strip()
+              raise SystemExit('installer SHA256 mismatch')
+          detached_signature = get_bytes(assets[f'{expected_installer}.sig']['browser_download_url']).decode('utf-8-sig').strip()
           if detached_signature != signature.strip():
-              raise SystemExit("latest.json signature does not match detached .sig asset")
-          print(f"PASS: {tag} canonical public updater release structure and SHA256 are valid")
+              raise SystemExit('latest.json signature does not match detached .sig asset')
+          print(f'PASS: {tag} canonical public updater release structure and SHA256 are valid')
