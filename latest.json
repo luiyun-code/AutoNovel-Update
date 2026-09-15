@@ -1,12 +1,12 @@
 {
-  "version": "2.1.0-alpha.3",
-  "notes": "AN 2.1.0-alpha.3 Portable single-EXE human-test package",
-  "pub_date": "2026-09-15T00:52:15.3040574Z",
+  "version": "2.1.0-alpha.4",
+  "notes": "AutoNovel alpha3 compatibility bridge; migration transport only",
+  "pub_date": "2026-09-15T15:11:19.0335890Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSd0ZKSVVwYTE2WlhKTSt4d1RTTUdUQWIzSFkxckgwMHpUbUJGVWowWjFjdXVydFd1THpBWlRhb1BGUXVyZnEyeUN1S2Y3am5oK3ZkYmxCMko1YVZzellsT095TlVQbkFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDMzNTM0CWZpbGU6YW4uZXhlCkpkb0J6RmlwTHMxcGc1RHZNMVh3dGpjbUZnZ1V5YU4rVG02bzFrUzFUTmFSUXJIUmVjTUFlS3ZkS1pjeElQUXJaTmtad1ZkWHZnSWllTjNqV1BJMUJ3PT0K",
-      "sha256": "ad7b1044a5b0f25ea19a400de0de9dc43906cdea0ff6a99ef43f980836fff90f",
-      "url": "https://github.com/luiyun-code/AutoNovel-Update/releases/download/v2.1.0-alpha.3/AN_2.1.0-alpha.3_x64.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSd0ZKSVVwYTE2WldMQ0tZRm5iL3pBU2ZZR2NvZThkSGloQ3hqYWQwdi9LYkdFVW5CWEMrc2p0aUhObjBHZjNTWW9WZERET0RuNHB3U0hpbE9YcXpPOUswOTE3WkZ0bndRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5NDg1MDc4CWZpbGU6YW4uZXhlCjZRZ1BXUEtSRDB1RXQyY0EySml4aGRjenJUT0M4NzRmV1BYdHdpQ1BhVFNRUkhQYlVDdGhNZnBtWFZ1TkpvNnd5MEZnQnFNdWF5dTVwNmlMdnY4S0RnPT0K",
+      "sha256": "0d9da9711c0b3eb8e177c033bc1e77c10e2f4a6e1cd2eb226a2980789e840887",
+      "url": "https://github.com/luiyun-code/AutoNovel-Update/releases/download/v2.1.0-alpha.4/AutoNovel.exe"
     }
   }
 }
