@@ -1,40 +1,44 @@
 # AutoNovel Update Channel
 
-Public binary distribution surface for **AutoNovel AN 2.1+**.
+Public binary distribution surface for **AutoNovel 2.1+**.
 
-The application source code remains private in `luiyun-code/AutoNovel`. This repository is deliberately **not** a source mirror.
+Application source remains private in `luiyun-code/AutoNovel`; this repository is deliberately not a source mirror.
 
 ## Canonical Portable channel
 
-AN 2.1 Portable clients read the public updater pointer from the repository root:
+AutoNovel clients read:
 
 `https://raw.githubusercontent.com/luiyun-code/AutoNovel-Update/main/latest.json`
 
-Each Portable Windows release contains only the signed single-EXE update assets produced by the private AutoNovel build pipeline:
+Starting with the release after alpha.3, every Windows Portable release uses exactly:
 
+- `AutoNovel.exe`
+- `AutoNovel.exe.sig`
+- `AutoNovel.exe.sha256`
 - `latest.json`
-- `AN_<version>_x64.exe`
-- `AN_<version>_x64.exe.sig`
-- `AN_<version>_x64.exe.sha256`
 
-No NSIS `setup.exe`, MSI, source code, runtime DLL bundle or permanent updater helper belongs to the AN 2.1 Portable publication line.
+No NSIS `setup.exe`, MSI, source code, runtime DLL bundle or permanent updater helper belongs to the AutoNovel Portable publication line.
 
-Release tags use `v<semver>`, for example `v2.1.0-alpha.3`.
+Release tags use `v<semver>`.
 
-## Alpha migration boundary
+## Alpha.3 historical naming bridge
 
-`v2.1.0-alpha.1` and `v2.1.0-alpha.2` are historical installer-based test releases. They are retained only so the already-installed alpha.2 client is not pointed at a raw EXE through its retired installer updater.
+`v2.1.0-alpha.3` was published before the permanent executable filename was frozen. Its immutable historical binary is:
 
-Portable alpha releases use the repository-root `latest.json` pointer. `v2.1.0-alpha.3` is the one-time manual migration build; the first Portable self-replacement human test is alpha.3 to alpha.4.
+`AN_2.1.0-alpha.3_x64.exe`
+
+That filename is valid only for alpha.3. Alpha.4 and all later releases must publish `AutoNovel.exe`.
+
+`v2.1.0-alpha.1` and `v2.1.0-alpha.2` are historical installer-era test releases. The old `releases/latest` pointer intentionally remains on alpha.2 so an already-installed legacy client cannot interpret a raw Portable EXE as an installer. Portable clients use repository-root `latest.json` instead.
 
 ## Security boundary
 
-- Never publish AutoNovel source, SQLite/user data, credentials, signing private keys, passwords, PATs, or CI logs containing secrets here.
+- Never publish AutoNovel source, SQLite/user data, credentials, signing private keys, passwords, PATs or secret-bearing CI logs here.
 - The updater private key stays outside both repositories and is provided only to the trusted private build pipeline.
-- Portable clients verify detached signatures against the public key embedded in the application before replacing `AN.exe`.
-- A missing, malformed, unsigned, wrong-platform, downgraded, wrong-source, or noncanonical update must fail closed.
-- The temporary updater helper is created at runtime under `%TEMP%`, is not a distributed asset, and is removed after successful replacement.
-- Do not hand-edit a generated signature, checksum, or release manifest after publication.
+- Clients verify detached signatures against the public key embedded in AutoNovel before replacing the executable.
+- A missing, malformed, unsigned, wrong-platform, downgraded, wrong-source or noncanonical update fails closed.
+- The temporary updater helper is created at runtime under `%TEMP%`, is not a distributed asset and is removed after successful replacement.
+- Do not hand-edit a generated signature, checksum or release manifest after publication.
 
 ## Ownership
 
