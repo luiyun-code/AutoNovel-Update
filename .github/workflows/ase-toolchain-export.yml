@@ -15,16 +15,23 @@ env:
 jobs:
   export:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
+      - name: Set up exact Python 3.12.7
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.7'
+          cache: ''
+
       - name: Bind exact tools
         shell: bash
         run: |
           set -euxo pipefail
+          test "$(python --version 2>&1)" = 'Python 3.12.7'
           sudo apt-get update
           sudo apt-get install -y nasm
           test "$(nasm -v)" = "$NASM_VERSION_TEXT"
-          python3 -m pip download --disable-pip-version-check --no-deps --only-binary=:all: "capstone==${CAPSTONE_VERSION}" -d "$RUNNER_TEMP/pkg"
+          python -m pip download --disable-pip-version-check --no-deps --only-binary=:all: "capstone==${CAPSTONE_VERSION}" -d "$RUNNER_TEMP/pkg"
           test "$(find "$RUNNER_TEMP/pkg" -maxdepth 1 -name 'capstone-5.0.3-*.whl' | wc -l)" -eq 1
 
       - name: Build provenance bundle
@@ -34,12 +41,22 @@ jobs:
           mkdir -p "$RUNNER_TEMP/export/bin" "$RUNNER_TEMP/export/python"
           cp "$(command -v nasm)" "$RUNNER_TEMP/export/bin/nasm"
           cp "$RUNNER_TEMP/pkg"/capstone-5.0.3-*.whl "$RUNNER_TEMP/export/python/"
+          py_prefix="$(python - <<'PY'
+          import sys
+          print(sys.prefix)
+          PY
+          )"
+          tar -C "$(dirname "$py_prefix")" -czf "$RUNNER_TEMP/export/python-3.12.7-runtime.tar.gz" "$(basename "$py_prefix")"
           {
             echo "runner_image=ubuntu-24.04"
             echo "nasm_version=$(nasm -v)"
             echo "nasm_path=$(command -v nasm)"
             echo "nasm_sha256=$(sha256sum "$(command -v nasm)" | awk '{print $1}')"
-            echo "python_version=$(python3 --version 2>&1)"
+            echo "python_version=$(python --version 2>&1)"
+            echo "python_path=$(command -v python)"
+            echo "python_prefix=$py_prefix"
+            echo "python_executable_sha256=$(sha256sum "$(command -v python)" | awk '{print $1}')"
+            echo "python_runtime_tar_sha256=$(sha256sum "$RUNNER_TEMP/export/python-3.12.7-runtime.tar.gz" | awk '{print $1}')"
             echo "capstone_version=${CAPSTONE_VERSION}"
             echo "capstone_wheel=$(basename "$RUNNER_TEMP/pkg"/capstone-5.0.3-*.whl)"
             echo "capstone_wheel_sha256=$(sha256sum "$RUNNER_TEMP/pkg"/capstone-5.0.3-*.whl | awk '{print $1}')"
@@ -50,7 +67,7 @@ jobs:
       - name: Upload one-day toolchain artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ase-offline-toolchain
+          name: ase-offline-toolchain-py3127
           path: |
             ${{ runner.temp }}/ase-offline-toolchain.tar.gz
             ${{ runner.temp }}/ase-offline-toolchain.tar.gz.sha256
