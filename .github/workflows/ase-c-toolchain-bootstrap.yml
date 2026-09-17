@@ -1,0 +1,95 @@
+name: ASE C isolated toolchain bootstrap
+
+on:
+  push:
+    branches: [ase-c-toolchain-bootstrap]
+    paths:
+      - '.github/workflows/ase-c-toolchain-bootstrap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-toolchain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ase-c-toolchain-bootstrap
+          fetch-depth: 1
+
+      - name: Build exact isolated x86 toolchain
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ase-c-toolchain /tmp/capstone-src /tmp/capstone-py /tmp/nasm-root
+          mkdir -p .ase-c-toolchain/payload /tmp/capstone-py /tmp/nasm-root
+
+          # Official Capstone 5.0.3 source identity.
+          git clone --depth 1 --branch 5.0.3 https://github.com/capstone-engine/capstone.git /tmp/capstone-src
+          test "$(git -C /tmp/capstone-src rev-parse HEAD)" = "5cca00533dadfe53181f1de3525f859769f69b65"
+          (
+            cd /tmp/capstone-src
+            CAPSTONE_ARCHS=x86 CAPSTONE_STATIC=no CAPSTONE_SHARED=yes ./make.sh
+          )
+
+          python3 -m pip install --disable-pip-version-check --no-deps --target /tmp/capstone-py 'capstone==5.0.3'
+          test "$(PYTHONPATH=/tmp/capstone-py python3 -c 'import capstone; print(capstone.__version__)')" = "5.0.3"
+
+          # Replace all-architecture wheel native library with x86-only library built from the exact 5.0.3 tag.
+          find /tmp/capstone-py/capstone/lib -type f -delete
+          cp /tmp/capstone-src/libcapstone.so.5 /tmp/capstone-py/capstone/lib/libcapstone.so
+          strip --strip-unneeded /tmp/capstone-py/capstone/lib/libcapstone.so
+          test "$(PYTHONPATH=/tmp/capstone-py python3 -c 'import capstone; print(capstone.__version__)')" = "5.0.3"
+          PYTHONPATH=/tmp/capstone-py python3 - <<'PY'
+          from capstone import Cs, CS_ARCH_X86, CS_MODE_64
+          md=Cs(CS_ARCH_X86, CS_MODE_64); md.detail=True
+          ins=list(md.disasm(bytes.fromhex('4883ec78c3'),0x1000))
+          assert [(x.mnemonic,x.size) for x in ins] == [('sub',4),('ret',1)]
+          print('CAPSTONE_X86_SMOKE=PASS')
+          PY
+
+          # Exact Debian NASM 2.16.01 package, extracted without installation.
+          curl -fL --retry 3 -o /tmp/nasm.deb 'https://deb.debian.org/debian/pool/main/n/nasm/nasm_2.16.01-1_amd64.deb'
+          echo '0180693ad5d2da8b36e7d73b9b596dc3e9f900238e3de699976c0576875b878f  /tmp/nasm.deb' | sha256sum -c -
+          dpkg-deb -x /tmp/nasm.deb /tmp/nasm-root
+          test "$(/tmp/nasm-root/usr/bin/nasm -v)" = 'NASM version 2.16.01'
+
+          mkdir -p /tmp/toolroot/bin /tmp/toolroot/python
+          cp /tmp/nasm-root/usr/bin/nasm /tmp/toolroot/bin/nasm
+          cp -a /tmp/capstone-py/capstone /tmp/toolroot/python/capstone
+          strip --strip-unneeded /tmp/toolroot/bin/nasm || true
+
+          printf '%s\n' \
+            'schema=ASE_C_ISOLATED_TOOLCHAIN_V1' \
+            'capstone_version=5.0.3' \
+            'capstone_git_commit=5cca00533dadfe53181f1de3525f859769f69b65' \
+            'capstone_arch=x86' \
+            'nasm_version=2.16.01' \
+            'nasm_deb_sha256=0180693ad5d2da8b36e7d73b9b596dc3e9f900238e3de699976c0576875b878f' \
+            "runner_python=$(python3 --version 2>&1)" \
+            "capstone_lib_sha256=$(sha256sum /tmp/toolroot/python/capstone/lib/libcapstone.so | awk '{print $1}')" \
+            "nasm_exe_sha256=$(sha256sum /tmp/toolroot/bin/nasm | awk '{print $1}')" \
+            > /tmp/toolroot/TOOLCHAIN_MANIFEST.txt
+
+          tar -C /tmp/toolroot -cJf /tmp/ase-c-toolchain.tar.xz .
+          sha256sum /tmp/ase-c-toolchain.tar.xz > .ase-c-toolchain/PAYLOAD_SHA256.txt
+          wc -c /tmp/ase-c-toolchain.tar.xz > .ase-c-toolchain/PAYLOAD_SIZE.txt
+          base64 -w0 /tmp/ase-c-toolchain.tar.xz | split -b 131072 -d -a 3 - .ase-c-toolchain/payload/chunk.
+          cp /tmp/toolroot/TOOLCHAIN_MANIFEST.txt .ase-c-toolchain/TOOLCHAIN_MANIFEST.txt
+          printf 'chunk_count=%s\n' "$(find .ase-c-toolchain/payload -type f | wc -l)" >> .ase-c-toolchain/TOOLCHAIN_MANIFEST.txt
+          cat .ase-c-toolchain/TOOLCHAIN_MANIFEST.txt
+          cat .ase-c-toolchain/PAYLOAD_SHA256.txt
+          cat .ase-c-toolchain/PAYLOAD_SIZE.txt
+
+      - name: Publish text transport to isolated branch
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name 'ASE-C toolchain bootstrap'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .ase-c-toolchain
+          git commit -m '[ASE-C] Publish isolated toolchain text transport'
+          git push origin HEAD:ase-c-toolchain-bootstrap
