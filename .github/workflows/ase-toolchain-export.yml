@@ -1,0 +1,58 @@
+name: ASE Temporary Toolchain Export
+
+on:
+  push:
+    branches: ['tmp/ase-toolchain-20260918']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CAPSTONE_VERSION: '5.0.3'
+  NASM_VERSION_TEXT: 'NASM version 2.16.01'
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Bind exact tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y nasm
+          test "$(nasm -v)" = "$NASM_VERSION_TEXT"
+          python3 -m pip download --disable-pip-version-check --no-deps --only-binary=:all: "capstone==${CAPSTONE_VERSION}" -d "$RUNNER_TEMP/pkg"
+          test "$(find "$RUNNER_TEMP/pkg" -maxdepth 1 -name 'capstone-5.0.3-*.whl' | wc -l)" -eq 1
+
+      - name: Build provenance bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/export/bin" "$RUNNER_TEMP/export/python"
+          cp "$(command -v nasm)" "$RUNNER_TEMP/export/bin/nasm"
+          cp "$RUNNER_TEMP/pkg"/capstone-5.0.3-*.whl "$RUNNER_TEMP/export/python/"
+          {
+            echo "runner_image=ubuntu-24.04"
+            echo "nasm_version=$(nasm -v)"
+            echo "nasm_path=$(command -v nasm)"
+            echo "nasm_sha256=$(sha256sum "$(command -v nasm)" | awk '{print $1}')"
+            echo "python_version=$(python3 --version 2>&1)"
+            echo "capstone_version=${CAPSTONE_VERSION}"
+            echo "capstone_wheel=$(basename "$RUNNER_TEMP/pkg"/capstone-5.0.3-*.whl)"
+            echo "capstone_wheel_sha256=$(sha256sum "$RUNNER_TEMP/pkg"/capstone-5.0.3-*.whl | awk '{print $1}')"
+          } | tee "$RUNNER_TEMP/export/PROVENANCE.txt"
+          tar -C "$RUNNER_TEMP/export" -czf "$RUNNER_TEMP/ase-offline-toolchain.tar.gz" .
+          sha256sum "$RUNNER_TEMP/ase-offline-toolchain.tar.gz" | tee "$RUNNER_TEMP/ase-offline-toolchain.tar.gz.sha256"
+
+      - name: Upload one-day toolchain artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ase-offline-toolchain
+          path: |
+            ${{ runner.temp }}/ase-offline-toolchain.tar.gz
+            ${{ runner.temp }}/ase-offline-toolchain.tar.gz.sha256
+          retention-days: 1
+          if-no-files-found: error
