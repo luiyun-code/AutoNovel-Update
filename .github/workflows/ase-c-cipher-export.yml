@@ -1,0 +1,27 @@
+name: ASE C Encrypted Offline Input Export
+on:
+  push:
+    branches: ['tmp/ase-c-cipher-20260918']
+    paths:
+      - '.github/workflows/ase-c-cipher-export.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+      - shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(find ase-c-cipher -maxdepth 1 -name 'c*.b64' | wc -l)" -eq 15
+          sha256sum ase-c-cipher/* > ase-c-cipher/CIPHERTEXT_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ase-c-encrypted-inputs
+          path: ase-c-cipher/
+          retention-days: 1
+          if-no-files-found: error
