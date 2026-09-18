@@ -1,0 +1,127 @@
+{
+  "scheme": "ChaCha20-IETF, counter=1; integrity/finality by source Git blob SHA",
+  "source_repo": "luiyun-code/translateCT",
+  "source_ref": "CTdev",
+  "files": [
+    {
+      "index": 0,
+      "name": "six.md",
+      "source_path": "Ashes of the Singularity - Escalation/analysis/production_builder_static_review/n35_activation_six_symbol_machine_schedule_current/00_six_symbol_machine_schedule.md",
+      "source_blob_sha": "48cdd72bcbb5fd218fca4f8a22d2eae7facc86cc",
+      "cipher_path": "ase-c-cipher/c00.b64",
+      "nonce_counter": 1
+    },
+    {
+      "index": 1,
+      "name": "pp_verdict.md",
+      "source_path": "Ashes of the Singularity - Escalation/analysis/production_builder_static_review/n35_activation_six_symbol_machine_schedule_current/01_b_pp_final_owner_contradiction_verdict.md",
+      "source_blob_sha": "f385916e56b2f6cfcbe59c74c3a4d3cef6b831ea",
+      "cipher_path": "ase-c-cipher/c01.b64",
+      "nonce_counter": 2
+    },
+    {
+      "index": 2,
+      "name": "bolo.md",
+      "source_path": "Ashes of the Singularity - Escalation/analysis/production_builder_static_review/n35_activation_bootstrap_loadone_schedule_current/00_bootstrap_loadone_selected_schedule.md",
+      "source_blob_sha": "8b3e9f4c256b4c12cae9873412f75de282cb1687",
+      "cipher_path": "ase-c-cipher/c02.b64",
+      "nonce_counter": 3
+    },
+    {
+      "index": 3,
+      "name": "a02_auth.md",
+      "source_path": "Ashes of the Singularity - Escalation/analysis/production_builder_static_review/n35_activation_bootstrap_loadone_schedule_current/02_a_next_load_serial_initialization_authority.md",
+      "source_blob_sha": "6a1e7ec5d1719b53ba973a33c6eff322b9245863",
+      "cipher_path": "ase-c-cipher/c03.b64",
+      "nonce_counter": 4
+    },
+    {
+      "index": 4,
+      "name": "a02_binding.md",
+      "source_path": "Ashes of the Singularity - Escalation/analysis/production_builder_static_review/n35_activation_bootstrap_loadone_schedule_current/03_a_a02_authority_binding_verdict.md",
+      "source_blob_sha": "171d11339bd282ca81d02ed3a983c0688cbf60fd",
+      "cipher_path": "ase-c-cipher/c04.b64",
+      "nonce_counter": 5
+    },
+    {
+      "index": 5,
+      "name": "stage1.md",
+      "source_path": "Ashes of the Singularity - Escalation/analysis/production_builder_static_review/n35_activation_bootstrap_loadone_schedule_current/04_b_stage1_final_adjudication.md",
+      "source_blob_sha": "7304c219ebf4b8085d4aa511353be322b0ad24e5",
+      "cipher_path": "ase-c-cipher/c05.b64",
+      "nonce_counter": 6
+    },
+    {
+      "index": 6,
+      "name": "ASE_ACTIVE.py",
+      "source_path": "Ashes of the Singularity - Escalation/tools/ASE_ACTIVE.py",
+      "source_blob_sha": "ae81ed294f418634d6a7df2b53e6e7afe3e90386",
+      "cipher_path": "ase-c-cipher/c06.b64",
+      "nonce_counter": 7
+    },
+    {
+      "index": 7,
+      "name": "payload.00",
+      "source_path": ".github/ase-c-bootstrap/payload.00",
+      "source_blob_sha": "81bc4015ecb88736a1e30379b064aad9ac70e545",
+      "cipher_path": "ase-c-cipher/c07.b64",
+      "nonce_counter": 8
+    },
+    {
+      "index": 8,
+      "name": "payload.01",
+      "source_path": ".github/ase-c-bootstrap/payload.01",
+      "source_blob_sha": "bf71d683513e303b7e57541e039ce407d7c30044",
+      "cipher_path": "ase-c-cipher/c08.b64",
+      "nonce_counter": 9
+    },
+    {
+      "index": 9,
+      "name": "payload.02",
+      "source_path": ".github/ase-c-bootstrap/payload.02",
+      "source_blob_sha": "cf2b7ca2e64db6c8f9e0e778e25c6949e8086493",
+      "cipher_path": "ase-c-cipher/c09.b64",
+      "nonce_counter": 10
+    },
+    {
+      "index": 10,
+      "name": "payload.03",
+      "source_path": ".github/ase-c-bootstrap/payload.03",
+      "source_blob_sha": "1583dd6ba3eb9dd2948308a15a46551e4bcc9abc",
+      "cipher_path": "ase-c-cipher/c10.b64",
+      "nonce_counter": 11
+    },
+    {
+      "index": 11,
+      "name": "repair.00",
+      "source_path": ".github/ase-c-bootstrap/repair.00",
+      "source_blob_sha": "456bb15241388d73d72d1e732e761a32d6954ea2",
+      "cipher_path": "ase-c-cipher/c11.b64",
+      "nonce_counter": 12
+    },
+    {
+      "index": 12,
+      "name": "repair.01",
+      "source_path": ".github/ase-c-bootstrap/repair.01",
+      "source_blob_sha": "b7042cbf2d100cd8d9e2fcf37f0630c7d3916c78",
+      "cipher_path": "ase-c-cipher/c12.b64",
+      "nonce_counter": 13
+    },
+    {
+      "index": 13,
+      "name": "repair.02",
+      "source_path": ".github/ase-c-bootstrap/repair.02",
+      "source_blob_sha": "fda60e39188e9972ad971fd2bc4f086d379927ed",
+      "cipher_path": "ase-c-cipher/c13.b64",
+      "nonce_counter": 14
+    },
+    {
+      "index": 14,
+      "name": "repair.03",
+      "source_path": ".github/ase-c-bootstrap/repair.03",
+      "source_blob_sha": "527dd1d5209c6bc12e9d9f6657ec415907d9bc3d",
+      "cipher_path": "ase-c-cipher/c14.b64",
+      "nonce_counter": 15
+    }
+  ]
+}
