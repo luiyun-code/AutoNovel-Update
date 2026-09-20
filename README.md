@@ -45,3 +45,28 @@ That filename is valid only for alpha.3. Alpha.4 and all later releases must pub
 `luiyun-code/AutoNovel` is the private source/integration repository.
 
 `luiyun-code/AutoNovel-Update` is the public signed binary/update-metadata repository only.
+
+
+## Android update channel
+
+Android 3.x uses a separate public manifest:
+
+`latest-android.json`
+
+This is intentionally independent from the Windows Portable `latest.json` channel so Windows 2.x and Android 3.x can advance independently.
+
+When an Android APK is published, the manifest platform entry has this shape:
+
+```json
+{
+  "version": "3.0.4",
+  "platforms": {
+    "android-x86_64": {
+      "sha256": "<64 lowercase hex>",
+      "url": "https://github.com/luiyun-code/AutoNovel-Update/releases/download/v3.0.4/AN.apk"
+    }
+  }
+}
+```
+
+AN downloads only the canonical `AN.apk` GitHub Release asset, verifies SHA-256, then hands it to the Android system package installer. Android still requires the user to approve package installation.
