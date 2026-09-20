@@ -1,6 +1,11 @@
 {
-  "version": "3.0.3",
-  "notes": "AutoNovel 3.0.3 Android updater baseline. No newer Android package is published yet.",
-  "pub_date": "2026-09-20T04:30:00Z",
-  "platforms": {}
+  "version": "3.0.8",
+  "notes": "AutoNovel 3.0.8 Android android-aarch64 update package",
+  "pub_date": "2026-09-20T15:25:09.6717645Z",
+  "platforms": {
+    "android-aarch64": {
+      "sha256": "b37c54f19604f63753f443d4bc5d1eb2b44670db0c362054eca1412bdde97557",
+      "url": "https://github.com/luiyun-code/AutoNovel-Update/releases/download/v3.0.8/AN.apk"
+    }
+  }
 }
