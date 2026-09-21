@@ -1,11 +1,11 @@
 {
-  "version": "3.0.9",
-  "notes": "AutoNovel 3.0.9 Android android-aarch64 update package",
-  "pub_date": "2026-09-20T15:46:22.2926266Z",
+  "version": "3.0.10",
+  "notes": "AutoNovel 3.0.10 Android android-aarch64 update package",
+  "pub_date": "2026-09-21T01:57:07.4512953Z",
   "platforms": {
     "android-aarch64": {
-      "sha256": "d3552917a5e9cae24c10d0e7721d0ce6054ead78d20fe177dfee1cdc6b6a23cb",
-      "url": "https://github.com/luiyun-code/AutoNovel-Update/releases/download/v3.0.9/AN.apk"
+      "sha256": "5aedfaed2553ca7d5799ca4f93804b7bfc1cc1a3a35ed8dc9e3dd5e6b36ef228",
+      "url": "https://github.com/luiyun-code/AutoNovel-Update/releases/download/v3.0.10/AN.apk"
     }
   }
 }
